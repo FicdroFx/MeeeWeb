@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ficdrofx.github.io/MeeeWeb/sitemap.xml
