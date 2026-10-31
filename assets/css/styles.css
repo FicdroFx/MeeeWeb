@@ -35,6 +35,20 @@
   --header-bg: rgb(255 255 255 / 0.85);
   --grid-line: rgb(19 21 27 / 0.055);
 
+  /* Hero sky */
+  --sky-base: linear-gradient(165deg, #dde2f2 0%, #c0c7e6 36%, #a1a8d6 70%, #8d92c9 100%);
+  --sky-c1: rgb(84 88 166 / 0.55);
+  --sky-c2: rgb(240 243 253 / 0.85);
+  --sky-c3: rgb(128 124 198 / 0.32);
+  --sky-c4: rgb(214 222 246 / 0.55);
+  --sky-line: rgb(255 255 255);
+  --sky-glow: rgb(125 135 255 / 0.95);
+  --sky-line-alpha: 0.9;
+  --sky-muted: #343950;
+  --sky-title-2: #42467a;
+  --sky-chip-border: rgb(52 57 80 / 0.35);
+  --sky-hover: rgb(255 255 255 / 0.4);
+
   --radius-lg: 20px;
   --radius: 14px;
   --radius-sm: 10px;
@@ -74,6 +88,19 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 40px -16px rgb(0 0 0 / 0.6);
   --header-bg: rgb(12 14 19 / 0.78);
   --grid-line: rgb(255 255 255 / 0.04);
+
+  --sky-base: linear-gradient(165deg, #0d1022 0%, #141838 45%, #1c2050 100%);
+  --sky-c1: rgb(88 94 200 / 0.38);
+  --sky-c2: rgb(150 165 255 / 0.12);
+  --sky-c3: rgb(130 90 200 / 0.25);
+  --sky-c4: rgb(90 130 220 / 0.18);
+  --sky-line: rgb(222 226 255);
+  --sky-glow: rgb(123 127 255 / 0.95);
+  --sky-line-alpha: 0.8;
+  --sky-muted: #b3b8d4;
+  --sky-title-2: #a3a7dc;
+  --sky-chip-border: rgb(179 184 212 / 0.35);
+  --sky-hover: rgb(255 255 255 / 0.08);
 
   color-scheme: dark;
 }
@@ -736,18 +763,42 @@ button { cursor: pointer; }
   padding-bottom: var(--section-y);
   isolation: isolate;
 }
-.hero::before {
-  content: "";
+/* Hero sky: nebula clouds (CSS) + stars and constellations (canvas, see initSky in main.js) */
+.hero-sky {
   position: absolute;
   inset: calc(var(--header-h) * -1) 0 0;
   z-index: -1;
-  background-image:
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 56px 56px;
-  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
+  overflow: hidden;
+  background: var(--sky-base);
 }
+.hero-sky::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: clamp(80px, 12vw, 160px);
+  background: linear-gradient(to bottom, transparent, var(--bg));
+}
+.sky-cloud {
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform;
+}
+.sky-cloud.c1 { width: 70vmax; height: 55vmax; right: -18vmax; top: -6vmax; background: radial-gradient(closest-side, var(--sky-c1), transparent); }
+.sky-cloud.c2 { width: 60vmax; height: 40vmax; left: -16vmax; top: -12vmax; background: radial-gradient(closest-side, var(--sky-c2), transparent); }
+.sky-cloud.c3 { width: 55vmax; height: 38vmax; left: 10vmax; bottom: -16vmax; background: radial-gradient(closest-side, var(--sky-c3), transparent); }
+.sky-cloud.c4 { width: 40vmax; height: 30vmax; right: 8vmax; bottom: -4vmax; background: radial-gradient(closest-side, var(--sky-c4), transparent); }
+.sky-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .sky-cloud.c1 { animation: drift-a 34s ease-in-out infinite alternate; }
+  .sky-cloud.c2 { animation: drift-b 40s ease-in-out infinite alternate; }
+  .sky-cloud.c3 { animation: drift-a 46s ease-in-out infinite alternate-reverse; }
+  .sky-cloud.c4 { animation: drift-b 30s ease-in-out infinite alternate-reverse; }
+}
+@keyframes drift-a { to { transform: translate3d(-6%, 5%, 0) scale(1.08); } }
+@keyframes drift-b { to { transform: translate3d(7%, -4%, 0) scale(1.05); } }
 
 .hero-grid {
   display: grid;
@@ -763,17 +814,19 @@ button { cursor: pointer; }
   letter-spacing: -0.04em;
   font-weight: 800;
 }
-.hero-title span { display: block; color: var(--text-muted); }
-.hero-text { margin-top: 24px; max-width: 560px; font-size: clamp(1.0625rem, 1.6vw, 1.1875rem); color: var(--text-muted); }
+.hero-title span { display: block; color: var(--sky-title-2); }
+.hero-text { margin-top: 24px; max-width: 560px; font-size: clamp(1.0625rem, 1.6vw, 1.1875rem); color: var(--sky-muted); }
+.hero .btn-ghost { color: var(--sky-muted); }
+.hero .btn-ghost:hover { color: var(--text); background: var(--sky-hover); }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
 .hero-roles { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 36px; list-style: none; padding: 0; }
 .hero-roles li {
   font-family: var(--font-mono);
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--sky-muted);
   padding: 4px 10px;
   border-radius: 6px;
-  border: 1px dashed var(--border-strong);
+  border: 1px dashed var(--sky-chip-border);
 }
 
 .hero-visual { position: relative; padding: 36px 0 152px 36px; }

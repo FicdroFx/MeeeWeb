@@ -273,6 +273,247 @@
     timer = setTimeout(tick, 700);
   }
 
+  /* Hero sky: twinkling stars, a new constellation every 3 seconds ------------ */
+  function initSky() {
+    var sky = document.querySelector("[data-sky]");
+    var canvas = sky && sky.querySelector("canvas");
+    if (!canvas || !canvas.getContext) return;
+
+    var ctx = canvas.getContext("2d");
+    var CYCLE = 3000;   // a new constellation starts every 3 seconds
+    var DRAW = 1100;    // time to draw its lines
+    var FADE = 700;     // fade-out after the next one has started
+    var w = 0, h = 0, dpr = 1;
+    var stars = [], constellations = [], colors = null;
+    var lastSpawn = -Infinity, frame = 0, running = false, inView = true;
+    var sprites = {
+      glow: ["205,212,255", "255,205,236", "218,206,255"].map(makeGlow),
+      spark: makeSpark()
+    };
+
+    // Pre-rendered star images keep each frame cheap.
+    function makeGlow(tint) {
+      var s = document.createElement("canvas");
+      s.width = s.height = 64;
+      var c = s.getContext("2d");
+      var g = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+      g.addColorStop(0, "rgba(255,255,255,1)");
+      g.addColorStop(0.12, "rgba(255,255,255,0.9)");
+      g.addColorStop(0.32, "rgba(" + tint + ",0.38)");
+      g.addColorStop(1, "rgba(" + tint + ",0)");
+      c.fillStyle = g;
+      c.fillRect(0, 0, 64, 64);
+      return s;
+    }
+
+    function makeSpark() {
+      var s = document.createElement("canvas");
+      s.width = s.height = 128;
+      var c = s.getContext("2d");
+      [[0, 64, 128, 64], [64, 0, 64, 128]].forEach(function (l) {
+        var g = c.createLinearGradient(l[0], l[1], l[2], l[3]);
+        g.addColorStop(0, "rgba(255,255,255,0)");
+        g.addColorStop(0.5, "rgba(255,255,255,0.95)");
+        g.addColorStop(1, "rgba(255,255,255,0)");
+        c.strokeStyle = g;
+        c.lineWidth = 1.5;
+        c.beginPath();
+        c.moveTo(l[0], l[1]);
+        c.lineTo(l[2], l[3]);
+        c.stroke();
+      });
+      return s;
+    }
+
+    function readColors() {
+      var cs = getComputedStyle(sky);
+      return {
+        line: cs.getPropertyValue("--sky-line").trim() || "#fff",
+        glow: cs.getPropertyValue("--sky-glow").trim() || "rgba(125,135,255,0.95)",
+        alpha: parseFloat(cs.getPropertyValue("--sky-line-alpha")) || 0.85
+      };
+    }
+
+    function makeStars() {
+      var count = Math.max(40, Math.min(160, Math.round((w * h) / 9000)));
+      stars = [];
+      for (var i = 0; i < count; i++) {
+        var big = Math.random() < 0.12;
+        stars.push({
+          x: Math.random(),
+          y: Math.random() * 0.92,
+          r: big ? 1.6 + Math.random() * 1.4 : 0.5 + Math.random() * 0.9,
+          big: big,
+          glow: sprites.glow[i % 3],
+          speed: 0.6 + Math.random() * 1.6,
+          phase: Math.random() * Math.PI * 2,
+          amp: 2 + Math.random() * 4
+        });
+      }
+    }
+
+    function pos(s, t) {
+      return {
+        x: s.x * w + Math.sin(t * 0.00025 + s.phase) * s.amp,
+        y: s.y * h + Math.cos(t * 0.0002 + s.phase) * s.amp
+      };
+    }
+
+    // Stars behind the headline and intro text are left out of constellations.
+    function textArea() {
+      var copy = document.querySelector(".hero-copy");
+      if (!copy) return null;
+      var sr = sky.getBoundingClientRect(), cr = copy.getBoundingClientRect(), pad = 24;
+      return {
+        x1: (cr.left - sr.left - pad) / w, x2: (cr.right - sr.left + pad) / w,
+        y1: (cr.top - sr.top - pad) / h, y2: (cr.bottom - sr.top + pad) / h
+      };
+    }
+
+    // Join 3–5 nearby stars, sometimes closing the shape, away from the previous one.
+    function spawn(t) {
+      var avoid = textArea();
+      var pool = stars.filter(function (s) {
+        var inText = avoid && s.x > avoid.x1 && s.x < avoid.x2 && s.y > avoid.y1 && s.y < avoid.y2;
+        return s.r > 1 && s.y < 0.85 && !inText;
+      });
+      var prev = constellations[constellations.length - 1];
+      var maxDist = Math.min(w, h) * 0.4;
+      for (var tries = 0; tries < 12 && pool.length > 2; tries++) {
+        var anchor = pool[Math.floor(Math.random() * pool.length)];
+        if (prev && Math.abs(anchor.x - prev.anchor.x) < 0.25) continue;
+        var chain = [anchor];
+        var size = 3 + Math.floor(Math.random() * 3);
+        while (chain.length < size) {
+          var cur = chain[chain.length - 1], best = null, bestDist = Infinity;
+          pool.forEach(function (s) {
+            if (chain.indexOf(s) !== -1) return;
+            var d = Math.hypot((s.x - cur.x) * w, (s.y - cur.y) * h);
+            if (d > 48 && d < maxDist && d < bestDist) { best = s; bestDist = d; }
+          });
+          if (!best) break;
+          chain.push(best);
+        }
+        if (chain.length < 3) continue;
+        var edges = [];
+        for (var i = 1; i < chain.length; i++) edges.push([chain[i - 1], chain[i]]);
+        if (Math.random() < 0.45) edges.push([chain[chain.length - 1], chain[0]]);
+        constellations.push({ start: t, anchor: anchor, stars: chain, edges: edges });
+        return;
+      }
+    }
+
+    function render(t) {
+      ctx.clearRect(0, 0, w, h);
+      constellations = constellations.filter(function (c) { return t - c.start < CYCLE + FADE; });
+
+      var lit = new Map();
+      ctx.lineCap = "round";
+      constellations.forEach(function (c) {
+        var age = t - c.start;
+        var alpha = age < CYCLE ? 1 : 1 - (age - CYCLE) / FADE;
+        var per = DRAW / c.edges.length;
+        ctx.save();
+        ctx.globalAlpha = alpha * colors.alpha;
+        ctx.strokeStyle = colors.line;
+        ctx.lineWidth = 1.1;
+        ctx.shadowColor = colors.glow;
+        ctx.shadowBlur = 10;
+        c.edges.forEach(function (e, i) {
+          var p = Math.min(1, Math.max(0, (age - i * per) / per));
+          if (p <= 0) return;
+          var a = pos(e[0], t), b = pos(e[1], t);
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(a.x + (b.x - a.x) * p, a.y + (b.y - a.y) * p);
+          ctx.stroke();
+        });
+        ctx.restore();
+        var glow = alpha * Math.min(1, age / DRAW);
+        c.stars.forEach(function (s) { lit.set(s, Math.max(lit.get(s) || 0, glow)); });
+      });
+
+      stars.forEach(function (s) {
+        var p = pos(s, t);
+        var twinkle = 0.55 + 0.45 * Math.sin(t * 0.001 * s.speed + s.phase);
+        var boost = lit.get(s) || 0;
+        var size = s.r * 8 * (1 + boost * 1.2);
+        ctx.globalAlpha = Math.min(1, twinkle * (s.big ? 1 : 0.75) + boost * 0.5);
+        ctx.drawImage(s.glow, p.x - size / 2, p.y - size / 2, size, size);
+        if (s.big || boost > 0) {
+          var spark = s.r * 9 * (1 + boost * 1.5) * (0.7 + 0.3 * twinkle);
+          ctx.globalAlpha = Math.min(1, (s.big ? 0.55 * twinkle : 0) + boost * 0.8);
+          ctx.drawImage(sprites.spark, p.x - spark, p.y - spark, spark * 2, spark * 2);
+        }
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    function loop(t) {
+      if (t - lastSpawn >= CYCLE) {
+        colors = readColors();
+        spawn(t);
+        lastSpawn = t;
+      }
+      render(t);
+      frame = requestAnimationFrame(loop);
+    }
+
+    function start() {
+      if (running || reduceMotion || !inView || document.hidden) return;
+      running = true;
+      frame = requestAnimationFrame(loop);
+    }
+
+    function stop() {
+      running = false;
+      cancelAnimationFrame(frame);
+    }
+
+    // Reduced motion: one still constellation, fully drawn.
+    function drawStill() {
+      colors = readColors();
+      if (!constellations.length) spawn(0);
+      render(DRAW);
+    }
+
+    function resize() {
+      var rect = sky.getBoundingClientRect();
+      var nw = Math.round(rect.width), nh = Math.round(rect.height);
+      if (!nw || !nh || (nw === w && nh === h)) return;
+      var regenerate = !stars.length || Math.abs(nw - w) > 80;
+      w = nw;
+      h = nh;
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (regenerate) {
+        makeStars();
+        constellations = [];
+        lastSpawn = -Infinity;
+      }
+      if (reduceMotion) drawStill();
+    }
+
+    resize();
+    if ("ResizeObserver" in window) new ResizeObserver(resize).observe(sky);
+    else window.addEventListener("resize", resize);
+
+    if (reduceMotion) return;
+
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (entries) {
+        inView = entries[0].isIntersecting;
+        if (inView) start(); else stop();
+      }).observe(sky);
+    }
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) stop(); else start();
+    });
+    start();
+  }
+
   /* Dialogs ------------------------------------------------------------------- */
   function initDialogs() {
     document.querySelectorAll("[data-dialog-open]").forEach(function (btn) {
@@ -394,6 +635,7 @@
   initTabs();
   initFilter();
   initTerminal();
+  initSky();
   initDialogs();
   initContactForm();
 })();
