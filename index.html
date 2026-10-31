@@ -18,8 +18,7 @@
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
 
-  <meta name="theme-color" content="#f6f6f3" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0c0e13" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#ffffff">
   <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
 
@@ -27,7 +26,7 @@
     (function () {
       var t;
       try { t = localStorage.getItem("theme"); } catch (e) {}
-      if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      if (t !== "light" && t !== "dark") t = "light";
       document.documentElement.setAttribute("data-theme", t);
       document.documentElement.classList.add("js");
     })();
@@ -91,7 +90,7 @@
       <div class="container hero-grid">
         <div class="hero-copy">
           <p class="status-badge reveal">
-            <span class="avatar" data-photo data-photo-decorative aria-hidden="true">M</span>
+            <span class="avatar" aria-hidden="true">M</span>
             Developer | Product Builder | Problem Solver
           </p>
           <h1 id="hero-title" class="hero-title reveal reveal-delay-1">
@@ -173,21 +172,13 @@
     <section id="about" class="section" aria-labelledby="about-title">
       <div class="container">
         <div class="about-grid">
-          <figure class="profile-card reveal">
-            <!-- Replace with your photo by setting photoUrl in assets/js/config.js -->
-            <div class="profile-photo" data-photo>
-              <span class="profile-monogram" aria-hidden="true">M</span>
-              <span class="profile-photo-note">Photo coming soon</span>
-            </div>
-            <figcaption>
-              <strong>Mani</strong>
-              <span>Product Developer | ERP Developer | Web Developer | QA &amp; Software Testing</span>
-            </figcaption>
-          </figure>
-
-          <div class="about-copy reveal reveal-delay-1">
+          <div class="about-intro reveal">
             <p class="eyebrow">About</p>
             <h2 id="about-title" class="section-title">More Than Just Code</h2>
+            <p class="about-role">Product Developer | ERP Developer | Web Developer | QA &amp; Software Testing</p>
+          </div>
+
+          <div class="about-copy reveal reveal-delay-1">
             <p>I'm interested in the complete journey of building software products — from understanding requirements and designing interfaces to developing features, testing workflows, fixing bugs, and improving the final experience.</p>
             <p>My experience spans web development, ERP product development, software testing, and practical problem-solving.</p>
             <p>Working across development and testing helps me understand software from multiple perspectives. I consider functionality, usability, business requirements, and reliability when improving a product.</p>

@@ -45,16 +45,6 @@
       note.hidden = Boolean(config.resumeUrl);
     });
 
-    if (config.photoUrl) {
-      document.querySelectorAll("[data-photo]").forEach(function (slot) {
-        var img = new Image();
-        img.src = base + config.photoUrl;
-        img.alt = slot.hasAttribute("data-photo-decorative") ? "" : (config.name || "Mani") + ", profile photo";
-        img.decoding = "async";
-        slot.replaceChildren(img);
-      });
-    }
-
     document.querySelectorAll("[data-year]").forEach(function (el) {
       el.textContent = new Date().getFullYear();
     });
